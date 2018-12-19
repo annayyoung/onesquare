@@ -1,0 +1,251 @@
+//
+//  game playViewController.swift
+//  test
+//
+//  Created by Anna Young on 10/4/18.
+//  Copyright © 2018 Anna Young. All rights reserved.
+//
+
+import UIKit
+
+class game_playViewController: UIViewController {
+    
+   
+    
+    @IBOutlet weak var pauseButton: UIButton!
+    @IBOutlet weak var addGameScoreLabel: UILabel!
+    @IBOutlet weak var timerLabel: UILabel?
+    var timer = Timer()
+    var seconds = 60
+    var score = 0
+    var colorGrid = [CAShapeLayer]()
+    var xVariable = 35
+    var yVariable = 100
+    var blockWidth = 100
+    var blockHeight = 100
+    var randomBlock = Int(arc4random_uniform(9))
+    var existGrid = 0
+    var layer1 = CAShapeLayer()
+    var blockList = [CAShapeLayer]()
+    var isPaused = false
+    var differentColor = UIColor(displayP3Red: 1.0, green: 0.0, blue: 0.0, alpha: 1.0)
+    var saveColor = UIColor(displayP3Red: 1.0, green: 0.0, blue: 0.0, alpha: 1.0)
+    
+    
+    override func viewDidLoad() {
+        timer = startTimer()
+        super.viewDidLoad()
+        createGrid()
+        print("new grid created")
+        fillGrid()
+    }
+    
+    func startTimer() -> Timer {
+        timer = Timer.scheduledTimer(timeInterval: 1, target: self,   selector: (#selector(timerUpdate)), userInfo: nil, repeats: true)
+        return timer
+    }
+    @IBAction func pauseButton1(_ sender: Any) {
+        if (isPaused == false) {
+            timer.invalidate()
+            isPaused = true
+        }
+        else {
+            timer = startTimer()
+            isPaused = false
+        }
+    }
+    
+    @objc func timerUpdate() {
+        seconds -= 1
+        timerLabel?.text = String(seconds)
+        
+        if (seconds == 0) {
+            stopTimer()
+            
+        }
+    }
+    
+    func createGrid() {
+        for i in 0...9 {
+            colorGrid.append(CAShapeLayer())
+        }
+    }
+    
+    func createColorBlock() -> CAShapeLayer {
+        layer1 = CAShapeLayer()
+        layer1.path = UIBezierPath(roundedRect: CGRect(x: xVariable, y: yVariable, width: blockWidth, height: blockHeight), cornerRadius: 20).cgPath
+        let newColor = createColor()
+        layer1.fillColor = newColor.cgColor
+        view.layer.addSublayer(layer1)
+        xVariable += 105
+        blockList.append(layer1)
+        return layer1
+    }
+    
+    func createColor() -> UIColor {
+      /*  let color = UIColor(red: randomColor(), green: randomColor(), blue: randomColor(), alpha: 1.0)
+        return color */
+        let color = UIColor(red: CGFloat(arc4random_uniform(256)) / 255, green: CGFloat(arc4random_uniform(256)) / 255, blue: CGFloat(arc4random_uniform(256)) / 255, alpha: 1)
+        return color
+
+    }
+    
+    func fillGrid() {
+        existGrid += 1
+        let screenSize = UIScreen.main.bounds
+        let screenWidth = screenSize.width
+        let screenHeight = screenSize.height
+        let totalWidth = xVariable + (blockWidth * 3)
+        let numberOfBlocks = Int(totalWidth / blockWidth) - 1
+        var cgSaveColor = saveColor.cgColor
+        randomBlock = randomNumber()
+        var i = 0
+        
+        
+      //  var color = UIColor(displayP3Red: 0.85, green: 0.5, blue: 0.3, alpha: 0.80)
+        while (i < 9) {
+            xVariable = 35
+            yVariable += 105
+            if (i < 9) {
+                for j in 0...numberOfBlocks {
+                    colorGrid[i] = createColorBlock()
+                    if (i > 0) {
+                        colorGrid[i].fillColor = cgSaveColor
+                    } else {
+                        cgSaveColor = colorGrid[i].fillColor!
+                    }
+                    i += 1
+                }
+            }
+        }
+        saveColor = UIColor(cgColor: cgSaveColor)
+        colorGrid[randomBlock].fillColor = saveColor.adjust(by: randomPercentage())!.cgColor
+        print(randomBlock)
+        xVariable = 35
+        yVariable = 100
+    }
+    
+        // Do any additional setup after loading the view.
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if let touch = touches.first {
+            var loc = touch.location(in: view)
+            var xTouch = Int(floor(loc.x))
+            var yTouch = Int(floor(loc.y))
+            var rbColumn = randomBlock % 3
+            var rbRow = Int(randomBlock / 3)
+            print(loc.x, " ", loc.y)
+            if (rbRow == 0) {
+                if (xTouch < ((randomBlock + 1) * 100 + 35)
+                    && (xTouch > (randomBlock * 100 + 35))
+                    && (yTouch < ((rbRow + 1) * 100 + 200))
+                    && (yTouch > (rbRow * 100 + 200))) {
+                    scoreUpdate()
+                    colorGrid.removeAll()
+                    generateNew()
+                    print("touched")
+                }
+                else {
+                    print("failure")
+                    gameOver()
+                }
+            }
+            else if (rbRow > 0) {
+                if (xTouch < ((rbColumn + 1)  * 100 + 35)
+                    && (xTouch > (rbColumn * 100 + 35))
+                    && (yTouch < ((rbRow + 1) * 100 + 200))
+                    && (yTouch > (rbRow * 100 + 200))) {
+                    scoreUpdate()
+                    colorGrid.removeAll()
+                    generateNew()
+                    print("touched")
+                }
+                else if !(xTouch < 35 || xTouch > 335 || yTouch > 500 || yTouch < 200) {
+                    print("another failure")
+                    gameOver()
+                }
+              /*  else {
+                    print("another failure")
+                    gameOver()
+                } */
+            }
+        }
+    }
+    
+    func generateNew() {
+        createGrid()
+        print("creating grid from generateNew function")
+        fillGrid()
+        print("filled grid from generateNew function")
+        existGrid += 1
+    }
+    
+    func randomNumber() -> Int {
+        var randomNumber = Int(arc4random_uniform(9))
+        return randomNumber
+    }
+    
+    func gameOver() {
+        
+        let storyBoard: UIStoryboard = UIStoryboard(name: "Main", bundle: nil)
+        let vc = storyBoard.instantiateViewController(withIdentifier: "gameOver") as! gameOver_ViewController
+        vc.finalScoreLabel?.text = String(score)
+        self.present(vc, animated: true, completion: nil)
+    }
+    
+    @objc func scoreUpdate() {
+        score += 1
+        addGameScoreLabel?.text = String(score)
+       
+    }
+
+    func stopTimer() {
+        timer.invalidate()
+        gameOver()
+    }
+
+    func randomColor() -> CGFloat {
+        var generateColor = CGFloat(arc4random()) / CGFloat(UInt32.max)
+        return generateColor
+    }
+    
+    func randomPercentage() -> CGFloat {
+        var number = CGFloat(arc4random_uniform(10 + 25))
+        return number
+    }
+    
+    /*
+    // MARK: - Navigation
+
+    // In a storyboard-based application, you will often want to do a little preparation before navigation
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        // Get the new view controller using segue.destination.
+        // Pass the selected object to the new view controller.
+    }
+    */
+    
+}
+
+extension UIColor {
+    
+    func lighter(by percentage: CGFloat = 30.0) -> UIColor? {
+        return self.adjust(by: abs(percentage) )
+    }
+    
+    func darker(by percentage: CGFloat = 30.0) -> UIColor? {
+        return self.adjust(by: -1 * abs(percentage) )
+    }
+    
+    func adjust(by percentage: CGFloat) -> UIColor? {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        if self.getRed(&red, green: &green, blue: &blue, alpha: &alpha) {
+            return UIColor(red: min(red + percentage/100, 1.0),
+                           green: min(green + percentage/100, 1.0),
+                           blue: min(blue + percentage/100, 1.0),
+                           alpha: alpha)
+        } else {
+            return nil
+        }
+    }
+
+}
